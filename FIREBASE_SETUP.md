@@ -1,92 +1,64 @@
-# 🔥 FIREBASE CONSOLE SETUP
+# Firebase Initialization and Required Settings
 
-## Step 1: Enable Authentication (3 minutes)
+This project is already wired to Firebase project `citywest-f4c4f` through:
+- `lib/firebase_options.dart`
+- `android/app/google-services.json`
+- `firebase.json`
 
-1. Go to https://console.firebase.google.com/
-2. Select your project
-3. Click **Build > Authentication**
-4. Click **Get Started** (if first time)
-5. Click **Email/Password** under Sign-in providers
-6. Toggle **Enable** to ON
-7. Click **Save**
+## 1) Firebase Console Settings
 
----
+1. Open Firebase Console -> project `citywest-f4c4f`.
+2. Go to `Authentication` -> `Sign-in method` -> enable `Email/Password`.
+3. Go to `Authentication` -> `Templates` -> `Email address verification`.
+4. Make sure verification email template is enabled and has your app name.
+5. Go to `Firestore Database` -> create database (if not created yet).
+6. Start in production mode (recommended for assignment security checks).
 
-## Step 2: Enable Firestore Database (3 minutes)
+## 2) Deploy Firestore Rules and Indexes
 
-1. Click **Build > Firestore Database**
-2. Click **Create database**
-3. Select **Start in test mode**
-4. Choose location: **europe-west** (closest to Rwanda)
-5. Click **Enable**
+This repo now includes:
+- `firestore.rules`
+- `firestore.indexes.json`
 
----
+Deploy them:
 
-## Step 3: Set Security Rules (2 minutes)
-
-1. In Firestore Database, click **Rules** tab
-2. **DELETE ALL** existing rules
-3. **COPY & PASTE** the rules below:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users collection - users can only read/write their own data
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Services collection
-    match /services/{serviceId} {
-      // Anyone authenticated with verified email can read
-      allow read: if request.auth != null && request.auth.token.email_verified;
-      
-      // Only authenticated users with verified email can create
-      // Must set createdBy to their own UID
-      allow create: if request.auth != null 
-                    && request.auth.token.email_verified
-                    && request.resource.data.createdBy == request.auth.uid;
-      
-      // Only the creator can update or delete their own services
-      allow update, delete: if request.auth != null 
-                            && request.auth.token.email_verified
-                            && resource.data.createdBy == request.auth.uid;
-    }
-  }
-}
+```bash
+firebase login
+firebase use citywest-f4c4f
+firebase deploy --only firestore:rules,firestore:indexes
 ```
 
-4. Click **Publish**
-5. Verify no errors appear
+## 3) Flutter Initialization Check
 
----
+`main.dart` initializes Firebase before app startup:
 
-## ✅ VERIFICATION
+```dart
+WidgetsFlutterBinding.ensureInitialized();
+await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+```
 
-### Check Authentication:
-- Go to **Authentication > Users**
-- Should be empty initially
-- After registration, users will appear here
+No extra code changes are needed for initialization.
 
-### Check Firestore:
-- Go to **Firestore Database > Data**
-- Should be empty initially
-- After loading sample data, collections will appear
+## 4) Email Verification Flow in App
 
-### Check Rules:
-- Go to **Firestore Database > Rules**
-- Should show the rules you pasted
-- Status should be "Published"
+Implemented behavior:
+- Signup sends verification email automatically.
+- Unverified users are blocked from app access.
+- A dedicated screen allows resend + refresh verification status.
 
----
+## 5) Security Expectations Enforced
 
-## 🎯 DONE!
+Rules now enforce:
+- Only authenticated + email-verified users can read services.
+- Only owner (`createdBy == request.auth.uid`) can create/update/delete their listings.
+- Users can only read/write their own profile document.
 
-Your Firebase is now configured. Return to the app and:
-1. Run `flutter pub get`
-2. Run `flutter run`
-3. Register a new account
-4. Verify your email
-5. Start using the app!
+## 6) ENOTFOUND Error You Reported
+
+`getaddrinfo ENOTFOUND codewhisperer.us-east-1.amazonaws.com` is a DNS/network resolution issue for AWS CodeWhisperer/Amazon Q endpoint, not a Flutter/Firebase app code issue.
+
+Quick checks:
+- Verify internet/DNS works (`nslookup codewhisperer.us-east-1.amazonaws.com`).
+- If on school/company network, check firewall/proxy restrictions.
+- If using VS Code AWS extension, sign out/in and restart VS Code.
+- If blocked by policy, disable CodeWhisperer extension while working on this app.
