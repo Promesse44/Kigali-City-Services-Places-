@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:developer' as developer;
 
 /// Seeds the Firestore 'services' collection with real Kigali City services.
@@ -14,12 +15,13 @@ class FirestoreSeeder {
 
   static Future<void> seedServices() async {
     final batch = _firestore.batch();
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? 'seed-data';
 
     for (final service in _kigaliServices) {
       final docRef = _firestore.collection('services').doc();
       final serviceData = Map<String, dynamic>.from(service);
       serviceData['id'] = docRef.id;
-      serviceData['createdBy'] = 'seed-data';
+      serviceData['createdBy'] = currentUserId;
       serviceData['timestamp'] = Timestamp.now();
       batch.set(docRef, serviceData);
     }

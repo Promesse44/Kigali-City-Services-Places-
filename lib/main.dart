@@ -45,26 +45,19 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    if (!authProvider.isInitialized) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-    return StreamBuilder(
-      stream: authProvider.authStateChanges,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    if (!authProvider.isAuthenticated) {
+      return const AuthScreen();
+    }
 
-        if (snapshot.hasData) {
-          if (!authProvider.isEmailVerified) {
-            return const EmailVerificationScreen();
-          }
-          return const HomeScreen();
-        }
+    if (!authProvider.isEmailVerified) {
+      return const EmailVerificationScreen();
+    }
 
-        return const AuthScreen();
-      },
-    );
+    return const HomeScreen();
   }
 }
 
@@ -96,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Services',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.list),
+            icon: Icon(Icons.storefront),
             label: 'My Listings',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
