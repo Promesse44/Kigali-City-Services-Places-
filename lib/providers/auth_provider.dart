@@ -124,15 +124,21 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    await _authService.updateProfile(
-      fullName: fullName,
-      district: district,
-      sector: sector,
-      cell: cell,
-    );
-    await refreshCurrentUser();
-    _isLoading = false;
-    notifyListeners();
+    try {
+      await _authService.updateProfile(
+        fullName: fullName,
+        district: district,
+        sector: sector,
+        cell: cell,
+      );
+      await refreshCurrentUser();
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> sendEmailVerification() async {

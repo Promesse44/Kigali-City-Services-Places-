@@ -97,7 +97,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
           ),
           Expanded(
             child: StreamBuilder<List<ServiceModel>>(
-              stream: servicesProvider.getServicesStream(),
+              stream: servicesProvider.getAllServicesStream(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());

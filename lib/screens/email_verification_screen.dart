@@ -19,7 +19,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     setState(() => _isChecking = false);
     
     if (authProvider.isEmailVerified) {
-      await authProvider.loadCurrentUser();
+      await authProvider.refreshCurrentUser();
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
