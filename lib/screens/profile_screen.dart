@@ -3,7 +3,7 @@ import '../services.dart';
 import '../seed_data.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -186,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedDistrict,
+            initialValue: _selectedDistrict,
             hint: const Text('Select District (Kigali)'),
             items: _kigaliDistricts
                 .map(

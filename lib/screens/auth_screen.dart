@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({Key? key}) : super(key: key);
+  const AuthScreen({super.key});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -111,8 +111,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 validator: (value) {
                   if (value?.isEmpty ?? true) return 'Password is required';
-                  if (value!.length < 6)
+                  if (value!.length < 6) {
                     return 'Password must be 6+ characters';
+                  }
                   return null;
                 },
               ),
@@ -131,7 +132,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _selectedDistrict,
+                  initialValue: _selectedDistrict,
                   hint: const Text('Select District (Kigali)'),
                   items: _kigaliDistricts
                       .map(

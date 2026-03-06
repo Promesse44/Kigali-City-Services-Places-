@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:developer' as developer;
 
 /// Seeds the Firestore 'services' collection with real Kigali City services.
 /// All coordinates are within the Kigali bounds defined in LocationService:
@@ -20,7 +21,7 @@ class FirestoreSeeder {
     }
 
     await batch.commit();
-    print('Seeded ${_kigaliServices.length} services into Firestore');
+    developer.log('Seeded ${_kigaliServices.length} services into Firestore');
   }
 
   static const List<Map<String, dynamic>> _kigaliServices = [

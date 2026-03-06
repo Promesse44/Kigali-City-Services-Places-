@@ -8,8 +8,7 @@ import 'kigali_map_screen.dart';
 class ServiceDetailsScreen extends StatefulWidget {
   final ServiceModel service;
 
-  const ServiceDetailsScreen({Key? key, required this.service})
-    : super(key: key);
+  const ServiceDetailsScreen({super.key, required this.service});
 
   @override
   State<ServiceDetailsScreen> createState() => _ServiceDetailsScreenState();

@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:math';
+import 'dart:developer' as developer;
 
 class UserModel {
   final String uid;
@@ -163,20 +164,20 @@ class AuthService {
   Future<UserModel?> getCurrentUser() async {
     try {
       if (_auth.currentUser == null) {
-        print('No authenticated user');
+        developer.log('No authenticated user');
         return null;
       }
 
       final uid = _auth.currentUser!.uid;
-      print('Fetching user data for uid: $uid');
+      developer.log('Fetching user data for uid: $uid');
       final doc = await _firestore.collection('users').doc(uid).get();
 
       if (doc.exists) {
-        print('User document found in Firestore');
+        developer.log('User document found in Firestore');
         return UserModel.fromMap(doc.data() as Map<String, dynamic>);
       }
 
-      print(
+      developer.log(
         'User document does not exist in Firestore, creating new document...',
       );
       // Auto-create Firestore document for authenticated users missing one
@@ -186,10 +187,10 @@ class AuthService {
         fullName: _auth.currentUser!.displayName ?? 'User',
       );
       await _firestore.collection('users').doc(uid).set(newUser.toMap());
-      print('Loaded user: ${newUser.fullName}');
+      developer.log('Loaded user: ${newUser.fullName}');
       return newUser;
     } catch (e) {
-      print('Error fetching user: $e');
+      developer.log('Error fetching user: $e');
       return null;
     }
   }
@@ -298,7 +299,7 @@ class ServiceRepository {
   Future<List<ServiceModel>> getAllServices() async {
     try {
       final snapshot = await _firestore.collection('services').get();
-      print('Fetched ${snapshot.docs.length} services from Firestore');
+      developer.log('Fetched ${snapshot.docs.length} services from Firestore');
 
       // Filter services to only include those within Kigali bounds
       final kigaliServices = snapshot.docs
@@ -311,12 +312,12 @@ class ServiceRepository {
           )
           .toList();
 
-      print(
+      developer.log(
         'Filtered to ${kigaliServices.length} services within Kigali bounds',
       );
       return kigaliServices;
     } catch (e) {
-      print('Error fetching services: $e');
+      developer.log('Error fetching services: $e');
       return [];
     }
   }
@@ -378,10 +379,10 @@ class ServiceRepository {
         }
       }
 
-      print('Found ${categories.length} categories');
+      developer.log('Found ${categories.length} categories');
       return categories.toList();
     } catch (e) {
-      print('Error fetching categories: $e');
+      developer.log('Error fetching categories: $e');
       return [];
     }
   }

@@ -4,7 +4,7 @@ import 'service_details_screen.dart';
 import 'kigali_map_screen.dart';
 
 class ServicesScreen extends StatefulWidget {
-  const ServicesScreen({Key? key}) : super(key: key);
+  const ServicesScreen({super.key});
 
   @override
   State<ServicesScreen> createState() => _ServicesScreenState();
@@ -220,10 +220,10 @@ class ServiceBriefTile extends StatelessWidget {
   final double distance;
 
   const ServiceBriefTile({
-    Key? key,
+    super.key,
     required this.service,
     required this.distance,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -258,10 +258,10 @@ class ServiceDetailedTile extends StatelessWidget {
   final double distance;
 
   const ServiceDetailedTile({
-    Key? key,
+    super.key,
     required this.service,
     required this.distance,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
