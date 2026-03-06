@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services.dart';
 import '../providers/auth_provider.dart';
+import '../providers/location_provider.dart';
 import '../seed_data.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -23,13 +24,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadUser();
-    });
   }
 
-  void _loadUser() {
-    final user = context.read<AuthProvider>().currentUser;
+  void _syncForm(UserModel? user) {
+    if (_isEditing) return;
     _nameController.text = user?.fullName ?? '';
     _selectedDistrict = user?.district;
     _sectorController.text = user?.sector ?? '';
@@ -93,6 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
+    context.read<LocationProvider>().clear();
     await context.read<AuthProvider>().logout();
   }
 
@@ -108,6 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.currentUser;
+    _syncForm(user);
 
     return Scaffold(
       appBar: AppBar(
@@ -117,6 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () {
+                _syncForm(user);
                 setState(() {
                   _isEditing = true;
                 });
