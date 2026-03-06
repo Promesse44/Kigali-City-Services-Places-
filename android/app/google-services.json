@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "295278056194",
+    "project_id": "citywest-f4c4f",
+    "storage_bucket": "citywest-f4c4f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:295278056194:android:b8ad2701b3d3be693c281b",
+        "android_client_info": {
+          "package_name": "com.example.kigali_service_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQEYunrCWstAT6Wa3tT5fcLDut1HvBmyE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
