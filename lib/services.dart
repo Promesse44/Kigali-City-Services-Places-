@@ -1,8 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geolocator/geolocator.dart';
 import 'dart:math';
-import 'dart:developer' as developer;
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
 
 class UserModel {
   final String uid;
@@ -12,7 +12,7 @@ class UserModel {
   final String? sector;
   final String? cell;
 
-  UserModel({
+  const UserModel({
     required this.uid,
     required this.email,
     required this.fullName,
@@ -20,6 +20,24 @@ class UserModel {
     this.sector,
     this.cell,
   });
+
+  UserModel copyWith({
+    String? uid,
+    String? email,
+    String? fullName,
+    String? district,
+    String? sector,
+    String? cell,
+  }) {
+    return UserModel(
+      uid: uid ?? this.uid,
+      email: email ?? this.email,
+      fullName: fullName ?? this.fullName,
+      district: district ?? this.district,
+      sector: sector ?? this.sector,
+      cell: cell ?? this.cell,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -34,12 +52,12 @@ class UserModel {
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      uid: map['uid'] ?? '',
-      email: map['email'] ?? '',
-      fullName: map['fullName'] ?? '',
-      district: map['district'],
-      sector: map['sector'],
-      cell: map['cell'],
+      uid: map['uid'] as String? ?? '',
+      email: map['email'] as String? ?? '',
+      fullName: map['fullName'] as String? ?? '',
+      district: map['district'] as String?,
+      sector: map['sector'] as String?,
+      cell: map['cell'] as String?,
     );
   }
 }
@@ -53,8 +71,10 @@ class ServiceModel {
   final String? phone;
   final String? website;
   final String? description;
+  final String createdBy;
+  final DateTime timestamp;
 
-  ServiceModel({
+  const ServiceModel({
     required this.id,
     required this.name,
     required this.category,
@@ -63,7 +83,37 @@ class ServiceModel {
     this.phone,
     this.website,
     this.description,
+    required this.createdBy,
+    required this.timestamp,
   });
+
+  ServiceModel copyWith({
+    String? id,
+    String? name,
+    String? category,
+    double? latitude,
+    double? longitude,
+    String? phone,
+    String? website,
+    String? description,
+    String? createdBy,
+    DateTime? timestamp,
+  }) {
+    return ServiceModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      phone: phone ?? this.phone,
+      website: website ?? this.website,
+      description: description ?? this.description,
+      createdBy: createdBy ?? this.createdBy,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
+  bool isOwnedBy(String userId) => createdBy == userId;
 
   Map<String, dynamic> toMap() {
     return {
@@ -75,39 +125,50 @@ class ServiceModel {
       'phone': phone,
       'website': website,
       'description': description,
+      'createdBy': createdBy,
+      'timestamp': Timestamp.fromDate(timestamp),
     };
   }
 
   factory ServiceModel.fromMap(String id, Map<String, dynamic> map) {
+    final rawTimestamp = map['timestamp'];
+    DateTime parsedTimestamp = DateTime.now();
+
+    if (rawTimestamp is Timestamp) {
+      parsedTimestamp = rawTimestamp.toDate();
+    } else if (rawTimestamp is String && rawTimestamp.isNotEmpty) {
+      parsedTimestamp = DateTime.tryParse(rawTimestamp) ?? DateTime.now();
+    }
+
     return ServiceModel(
       id: id,
-      name: map['name'] ?? '',
-      category: map['category'] ?? '',
+      name: map['name'] as String? ?? '',
+      category: map['category'] as String? ?? '',
       latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
-      phone: map['phone'],
-      website: map['website'],
-      description: map['description'],
+      phone: map['phone'] as String?,
+      website: map['website'] as String?,
+      description: map['description'] as String?,
+      createdBy: map['createdBy'] as String? ?? '',
+      timestamp: parsedTimestamp,
     );
   }
 
   double getDistance(double userLat, double userLng) {
-    const double earthRadiusKm = 6371;
-    final double dLat = _degreesToRadians(latitude - userLat);
-    final double dLng = _degreesToRadians(longitude - userLng);
-    final double a =
+    const earthRadiusKm = 6371.0;
+    final dLat = _degreesToRadians(latitude - userLat);
+    final dLng = _degreesToRadians(longitude - userLng);
+    final a =
         sin(dLat / 2) * sin(dLat / 2) +
         cos(_degreesToRadians(userLat)) *
             cos(_degreesToRadians(latitude)) *
             sin(dLng / 2) *
             sin(dLng / 2);
-    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return earthRadiusKm * c;
   }
 
-  static double _degreesToRadians(double degrees) {
-    return degrees * pi / 180;
-  }
+  static double _degreesToRadians(double degrees) => degrees * pi / 180;
 }
 
 class AuthService {
@@ -117,6 +178,16 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  bool get isEmailVerified => _auth.currentUser?.emailVerified ?? false;
+
+  Future<void> sendEmailVerification() async {
+    await _auth.currentUser?.sendEmailVerification();
+  }
+
+  Future<void> reloadUser() async {
+    await _auth.currentUser?.reload();
+  }
 
   Future<UserModel?> register({
     required String email,
@@ -132,8 +203,13 @@ class AuthService {
         password: password,
       );
 
+      final firebaseUser = userCredential.user;
+      if (firebaseUser == null) {
+        throw 'Registration failed';
+      }
+
       final user = UserModel(
-        uid: userCredential.user!.uid,
+        uid: firebaseUser.uid,
         email: email,
         fullName: fullName,
         district: district,
@@ -142,6 +218,7 @@ class AuthService {
       );
 
       await _firestore.collection('users').doc(user.uid).set(user.toMap());
+      await firebaseUser.sendEmailVerification();
 
       return user;
     } on FirebaseAuthException catch (e) {
@@ -162,37 +239,33 @@ class AuthService {
   }
 
   Future<UserModel?> getCurrentUser() async {
-    try {
-      if (_auth.currentUser == null) {
-        developer.log('No authenticated user');
-        return null;
-      }
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) return null;
 
-      final uid = _auth.currentUser!.uid;
-      developer.log('Fetching user data for uid: $uid');
-      final doc = await _firestore.collection('users').doc(uid).get();
+    final docRef = _firestore.collection('users').doc(firebaseUser.uid);
+    final snapshot = await docRef.get();
 
-      if (doc.exists) {
-        developer.log('User document found in Firestore');
-        return UserModel.fromMap(doc.data() as Map<String, dynamic>);
-      }
-
-      developer.log(
-        'User document does not exist in Firestore, creating new document...',
+    if (!snapshot.exists) {
+      final fallback = UserModel(
+        uid: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        fullName: firebaseUser.displayName ?? 'User',
       );
-      // Auto-create Firestore document for authenticated users missing one
-      final newUser = UserModel(
-        uid: uid,
-        email: _auth.currentUser!.email ?? '',
-        fullName: _auth.currentUser!.displayName ?? 'User',
-      );
-      await _firestore.collection('users').doc(uid).set(newUser.toMap());
-      developer.log('Loaded user: ${newUser.fullName}');
-      return newUser;
-    } catch (e) {
-      developer.log('Error fetching user: $e');
-      return null;
+      await docRef.set(fallback.toMap());
+      return fallback;
     }
+
+    final data = snapshot.data();
+    if (data == null) return null;
+    return UserModel.fromMap(data);
+  }
+
+  Stream<UserModel?> profileStream(String uid) {
+    return _firestore.collection('users').doc(uid).snapshots().map((snapshot) {
+      final data = snapshot.data();
+      if (data == null) return null;
+      return UserModel.fromMap(data);
+    });
   }
 
   Future<void> updateProfile({
@@ -201,19 +274,19 @@ class AuthService {
     String? sector,
     String? cell,
   }) async {
-    try {
-      // Use set with merge so it works even if the document doesn't exist yet
-      await _firestore.collection('users').doc(_auth.currentUser!.uid).set({
-        'uid': _auth.currentUser!.uid,
-        'email': _auth.currentUser!.email ?? '',
-        'fullName': fullName,
-        'district': district,
-        'sector': sector,
-        'cell': cell,
-      }, SetOptions(merge: true));
-    } catch (e) {
-      throw 'Failed to update profile';
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) {
+      throw 'No authenticated user';
     }
+
+    await _firestore.collection('users').doc(firebaseUser.uid).set({
+      'uid': firebaseUser.uid,
+      'email': firebaseUser.email ?? '',
+      'fullName': fullName,
+      'district': district,
+      'sector': sector,
+      'cell': cell,
+    }, SetOptions(merge: true));
   }
 
   Future<void> logout() async {
@@ -222,31 +295,26 @@ class AuthService {
 }
 
 class LocationService {
-  /// Kigali City Districts only (3 main districts)
   static const Map<String, List<double>> kigaliDistrictCoordinates = {
-    'Gasabo': [-1.9440, 29.9850], // Northern Kigali
-    'Kicukiro': [-1.9490, 29.8540], // Southern Kigali
-    'Nyarugenge': [-1.9560, 29.8760], // Central Kigali
+    'Gasabo': [-1.9440, 29.9850],
+    'Kicukiro': [-1.9490, 29.8540],
+    'Nyarugenge': [-1.9560, 29.8760],
   };
 
-  /// Kigali City Geographic Bounds
-  /// North: -1.9200, South: -1.9700, East: 30.0200, West: 29.8300
   static const double kigaliNorthBound = -1.9200;
   static const double kigaliSouthBound = -1.9700;
   static const double kigaliEastBound = 30.0200;
   static const double kigaliWestBound = 29.8300;
-
-  /// Kigali City Center (Downtown Kigali)
   static const double kigaliCenterLat = -1.9505;
   static const double kigaliCenterLng = 29.8739;
 
   Future<Position?> getCurrentLocation() async {
     try {
-      final permission = await Geolocator.checkPermission();
+      var permission = await Geolocator.checkPermission();
 
       if (permission == LocationPermission.denied) {
-        final result = await Geolocator.requestPermission();
-        if (result == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
           return null;
         }
       }
@@ -255,21 +323,19 @@ class LocationService {
         return null;
       }
 
-      return await Geolocator.getCurrentPosition(
+      return Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
-  /// Get location from Kigali district name, returns null if district not found
   List<double>? getDistrictCoordinates(String? district) {
     if (district == null || district.isEmpty) return null;
     return kigaliDistrictCoordinates[district];
   }
 
-  /// Check if coordinates are within Kigali city bounds
   static bool isWithinKigaliBounds(double latitude, double longitude) {
     return latitude >= kigaliSouthBound &&
         latitude <= kigaliNorthBound &&
@@ -277,13 +343,10 @@ class LocationService {
         longitude <= kigaliEastBound;
   }
 
-  /// Get default Kigali City center coordinates as fallback
-  static List<double> getDefaultCoordinates() => [
-    kigaliCenterLat,
-    kigaliCenterLng,
-  ];
+  static List<double> getDefaultCoordinates() {
+    return [kigaliCenterLat, kigaliCenterLng];
+  }
 
-  /// Get all available Kigali districts for UI dropdowns
   static List<String> getAvailableDistricts() {
     return kigaliDistrictCoordinates.keys.toList()..sort();
   }
@@ -296,13 +359,14 @@ class LocationService {
 class ServiceRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<List<ServiceModel>> getAllServices() async {
-    try {
-      final snapshot = await _firestore.collection('services').get();
-      developer.log('Fetched ${snapshot.docs.length} services from Firestore');
+  Stream<List<ServiceModel>> getServicesStream({String? category}) {
+    Query<Map<String, dynamic>> query = _firestore.collection('services');
+    if (category != null && category.isNotEmpty) {
+      query = query.where('category', isEqualTo: category);
+    }
 
-      // Filter services to only include those within Kigali bounds
-      final kigaliServices = snapshot.docs
+    return query.snapshots().map((snapshot) {
+      final services = snapshot.docs
           .map((doc) => ServiceModel.fromMap(doc.id, doc.data()))
           .where(
             (service) => LocationService.isWithinKigaliBounds(
@@ -311,79 +375,91 @@ class ServiceRepository {
             ),
           )
           .toList();
-
-      developer.log(
-        'Filtered to ${kigaliServices.length} services within Kigali bounds',
-      );
-      return kigaliServices;
-    } catch (e) {
-      developer.log('Error fetching services: $e');
-      return [];
-    }
+      services.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return services;
+    });
   }
 
-  Future<ServiceModel?> getServiceById(String id) async {
-    try {
-      final doc = await _firestore.collection('services').doc(id).get();
-      if (doc.exists) {
-        final service = ServiceModel.fromMap(
-          id,
-          doc.data() as Map<String, dynamic>,
-        );
-        // Validate service is within Kigali bounds
-        if (LocationService.isWithinKigaliBounds(
-          service.latitude,
-          service.longitude,
-        )) {
-          return service;
-        }
-        return null;
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
+  Stream<List<ServiceModel>> getUserServicesStream(String userId) {
+    return _firestore
+        .collection('services')
+        .where('createdBy', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+          final services = snapshot.docs
+              .map((doc) => ServiceModel.fromMap(doc.id, doc.data()))
+              .toList();
+          services.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          return services;
+        });
   }
 
-  Future<List<ServiceModel>> getServicesByCategory(String category) async {
-    try {
-      final snapshot = await _firestore
-          .collection('services')
-          .where('category', isEqualTo: category)
-          .get();
-
-      // Filter services to only include those within Kigali bounds
-      return snapshot.docs
-          .map((doc) => ServiceModel.fromMap(doc.id, doc.data()))
-          .where(
-            (service) => LocationService.isWithinKigaliBounds(
-              service.latitude,
-              service.longitude,
-            ),
-          )
-          .toList();
-    } catch (e) {
-      return [];
-    }
+  Stream<List<String>> getCategoriesStream() {
+    return _firestore.collection('services').snapshots().map((snapshot) {
+      final categories = snapshot.docs
+          .map((doc) => doc.data()['category'] as String?)
+          .whereType<String>()
+          .where((value) => value.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      return categories;
+    });
   }
 
-  Future<List<String>> getAllCategories() async {
-    try {
-      final snapshot = await _firestore.collection('services').get();
-      final categories = <String>{};
+  Future<void> addService(ServiceModel service) async {
+    final docRef = _firestore.collection('services').doc();
+    final payload = service.copyWith(id: docRef.id).toMap();
+    await docRef.set(payload);
+  }
 
-      for (var doc in snapshot.docs) {
-        final category = doc['category'] as String?;
-        if (category != null && category.isNotEmpty) {
-          categories.add(category);
-        }
-      }
-
-      developer.log('Found ${categories.length} categories');
-      return categories.toList();
-    } catch (e) {
-      developer.log('Error fetching categories: $e');
-      return [];
+  Future<void> updateService({
+    required ServiceModel service,
+    required String currentUserId,
+  }) async {
+    final docRef = _firestore.collection('services').doc(service.id);
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) {
+      throw 'Listing not found';
     }
+
+    final data = snapshot.data();
+    if (data == null) {
+      throw 'Listing data is invalid';
+    }
+
+    final existing = ServiceModel.fromMap(snapshot.id, data);
+    if (!existing.isOwnedBy(currentUserId)) {
+      throw 'You can only edit your own listings';
+    }
+
+    final safeService = service.copyWith(
+      createdBy: existing.createdBy,
+      timestamp: existing.timestamp,
+    );
+    await docRef.update(safeService.toMap());
+  }
+
+  Future<void> deleteService({
+    required String serviceId,
+    required String currentUserId,
+  }) async {
+    final docRef = _firestore.collection('services').doc(serviceId);
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) {
+      throw 'Listing not found';
+    }
+
+    final data = snapshot.data();
+    if (data == null) {
+      throw 'Listing data is invalid';
+    }
+
+    final existing = ServiceModel.fromMap(snapshot.id, data);
+    if (!existing.isOwnedBy(currentUserId)) {
+      throw 'You can only delete your own listings';
+    }
+
+    await docRef.delete();
   }
 }

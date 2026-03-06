@@ -14,10 +14,14 @@ class FirestoreSeeder {
 
   static Future<void> seedServices() async {
     final batch = _firestore.batch();
+    final now = DateTime.now().toIso8601String();
 
     for (final service in _kigaliServices) {
       final docRef = _firestore.collection('services').doc();
-      batch.set(docRef, service);
+      final serviceData = Map<String, dynamic>.from(service);
+      serviceData['createdBy'] = 'SYSTEM';
+      serviceData['timestamp'] = now;
+      batch.set(docRef, serviceData);
     }
 
     await batch.commit();

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/auth_provider.dart';
 import '../services.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -14,13 +17,11 @@ class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  String? _selectedDistrict;
   final _sectorController = TextEditingController();
   final _cellController = TextEditingController();
-  bool _isLoading = false;
+  String? _selectedDistrict;
   String? _error;
 
-  final AuthService _authService = AuthService();
   final List<String> _kigaliDistricts = LocationService.getAvailableDistricts();
 
   @override
@@ -37,39 +38,49 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      _isLoading = true;
       _error = null;
     });
 
+    final authProvider = context.read<AuthProvider>();
+    authProvider.clearError();
+
     try {
       if (_isLogin) {
-        await _authService.login(
-          email: _emailController.text,
+        await authProvider.login(
+          email: _emailController.text.trim(),
           password: _passwordController.text,
         );
-      } else {
-        await _authService.register(
-          email: _emailController.text,
-          password: _passwordController.text,
-          fullName: _nameController.text,
-          district: _selectedDistrict,
-          sector: _sectorController.text,
-          cell: _cellController.text,
-        );
+        return;
       }
+
+      await authProvider.register(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        fullName: _nameController.text.trim(),
+        district: _selectedDistrict,
+        sector: _sectorController.text.trim(),
+        cell: _cellController.text.trim(),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Verification email sent. Please verify before login.'),
+        ),
+      );
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final isLoading = authProvider.isLoading;
+    final providerError = authProvider.errorMessage;
+
     return Scaffold(
       appBar: AppBar(title: Text(_isLogin ? 'Login' : 'Register')),
       body: SingleChildScrollView(
@@ -79,12 +90,15 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_error != null)
+              if (_error != null || providerError != null)
                 Container(
                   padding: const EdgeInsets.all(12),
                   color: Colors.red.shade100,
                   child: Text(
-                    _error!,
+                    (_error ?? providerError ?? '').replaceFirst(
+                      'Exception: ',
+                      '',
+                    ),
                     style: TextStyle(color: Colors.red.shade900),
                   ),
                 ),
@@ -97,7 +111,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 validator: (value) {
                   if (value?.isEmpty ?? true) return 'Email is required';
-                  if (!value!.contains('@')) return 'Enter valid email';
+                  if (!value!.contains('@')) return 'Enter a valid email';
                   return null;
                 },
               ),
@@ -111,9 +125,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 validator: (value) {
                   if (value?.isEmpty ?? true) return 'Password is required';
-                  if (value!.length < 6) {
-                    return 'Password must be 6+ characters';
-                  }
+                  if (value!.length < 6) return 'Password must be 6+ characters';
                   return null;
                 },
               ),
@@ -143,7 +155,9 @@ class _AuthScreenState extends State<AuthScreen> {
                       )
                       .toList(),
                   onChanged: (value) {
-                    setState(() => _selectedDistrict = value);
+                    setState(() {
+                      _selectedDistrict = value;
+                    });
                   },
                   decoration: const InputDecoration(
                     labelText: 'District (Optional)',
@@ -169,23 +183,30 @@ class _AuthScreenState extends State<AuthScreen> {
               ],
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _isLoading ? null : _handleAuth,
-                child: _isLoading
-                    ? const CircularProgressIndicator()
+                onPressed: isLoading ? null : _handleAuth,
+                child: isLoading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : Text(_isLogin ? 'Login' : 'Register'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               TextButton(
-                onPressed: () {
-                  setState(() {
-                    _isLogin = !_isLogin;
-                    _error = null;
-                  });
-                },
+                onPressed: isLoading
+                    ? null
+                    : () {
+                        setState(() {
+                          _isLogin = !_isLogin;
+                          _error = null;
+                        });
+                        authProvider.clearError();
+                      },
                 child: Text(
                   _isLogin
-                      ? 'Don\'t have account? Register'
-                      : 'Already have account? Login',
+                      ? 'Don\'t have an account? Register'
+                      : 'Already have an account? Login',
                 ),
               ),
             ],

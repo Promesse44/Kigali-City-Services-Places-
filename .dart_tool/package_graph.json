@@ -16,6 +16,7 @@
         "geolocator",
         "intl",
         "latlong2",
+        "provider",
         "url_launcher"
       ],
       "devDependencies": [
@@ -626,6 +627,22 @@
       "version": "1.0.1",
       "dependencies": [
         "meta"
+      ]
+    },
+    {
+      "name": "provider",
+      "version": "6.1.5+1",
+      "dependencies": [
+        "collection",
+        "flutter",
+        "nested"
+      ]
+    },
+    {
+      "name": "nested",
+      "version": "1.0.0",
+      "dependencies": [
+        "flutter"
       ]
     }
   ],

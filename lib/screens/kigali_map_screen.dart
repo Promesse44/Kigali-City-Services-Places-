@@ -48,11 +48,14 @@ class _KigaliMapScreenState extends State<KigaliMapScreen> {
 
     await _loadUserLocation();
 
-    final services = await _serviceRepository.getAllServices();
-
-    setState(() {
-      _services = services;
-      _isLoading = false;
+    final servicesStream = _serviceRepository.getServicesStream();
+    servicesStream.first.then((services) {
+      if (mounted) {
+        setState(() {
+          _services = services;
+          _isLoading = false;
+        });
+      }
     });
   }
 

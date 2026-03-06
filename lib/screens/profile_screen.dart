@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services.dart';
+import '../providers/auth_provider.dart';
 import '../seed_data.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -10,9 +12,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final AuthService _authService = AuthService();
-  UserModel? _user;
-  bool _isLoading = true;
   bool _isEditing = false;
 
   final _nameController = TextEditingController();
@@ -24,26 +23,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUser();
+    });
   }
 
-  Future<void> _loadUser() async {
-    final user = await _authService.getCurrentUser();
-    if (mounted) {
-      setState(() {
-        _user = user;
-        _nameController.text = user?.fullName ?? '';
-        _selectedDistrict = user?.district;
-        _sectorController.text = user?.sector ?? '';
-        _cellController.text = user?.cell ?? '';
-        _isLoading = false;
-      });
-    }
+  void _loadUser() {
+    final user = context.read<AuthProvider>().currentUser;
+    _nameController.text = user?.fullName ?? '';
+    _selectedDistrict = user?.district;
+    _sectorController.text = user?.sector ?? '';
+    _cellController.text = user?.cell ?? '';
   }
 
   Future<void> _updateProfile() async {
     try {
-      await _authService.updateProfile(
+      await context.read<AuthProvider>().updateProfile(
         fullName: _nameController.text,
         district: _selectedDistrict,
         sector: _sectorController.text,
@@ -54,8 +49,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isEditing = false;
       });
 
-      await _loadUser();
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully')),
@@ -63,9 +56,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
       }
     }
   }
@@ -100,7 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
-    await _authService.logout();
+    await context.read<AuthProvider>().logout();
   }
 
   @override
@@ -113,6 +106,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -128,13 +124,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
         ],
       ),
-      body: _isLoading
+      body: authProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  if (_isEditing) _buildEditForm() else _buildProfileView(),
+                  if (_isEditing) _buildEditForm() else _buildProfileView(user),
                   const SizedBox(height: 24),
                   if (!_isEditing) ...[
                     ElevatedButton.icon(
@@ -160,15 +156,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileView() {
+  Widget _buildProfileView(UserModel? user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildProfileField('Email', _user?.email ?? ''),
-        _buildProfileField('Full Name', _user?.fullName ?? ''),
-        _buildProfileField('District', _user?.district ?? 'Not provided'),
-        _buildProfileField('Sector', _user?.sector ?? 'Not provided'),
-        _buildProfileField('Cell', _user?.cell ?? 'Not provided'),
+        _buildProfileField('Email', user?.email ?? ''),
+        _buildProfileField('Full Name', user?.fullName ?? ''),
+        _buildProfileField('District', user?.district ?? 'Not provided'),
+        _buildProfileField('Sector', user?.sector ?? 'Not provided'),
+        _buildProfileField('Cell', user?.cell ?? 'Not provided'),
       ],
     );
   }

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services.dart';
+import '../providers/auth_provider.dart';
+import '../providers/services_provider.dart';
+import '../providers/location_provider.dart';
 import 'service_details_screen.dart';
 import 'kigali_map_screen.dart';
 
@@ -11,124 +15,28 @@ class ServicesScreen extends StatefulWidget {
 }
 
 class _ServicesScreenState extends State<ServicesScreen> {
-  final ServiceRepository _serviceRepository = ServiceRepository();
-  final LocationService _locationService = LocationService();
-  final AuthService _authService = AuthService();
-
-  List<ServiceModel> _allServices = [];
-  List<ServiceModel> _filteredServices = [];
-  List<String> _categories = [];
   String? _selectedCategory;
   bool _isDetailedView = false;
-  double? _userLat;
-  double? _userLng;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-
-    await _loadUserLocation();
-    final services = await _serviceRepository.getAllServices();
-    final categories = await _serviceRepository.getAllCategories();
-
-    setState(() {
-      _allServices = services;
-      _filteredServices = services;
-      _categories = categories;
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _loadUserLocation() async {
-    final user = await _authService.getCurrentUser();
-
-    // 1. Try GPS location first
-    final position = await _locationService.getCurrentLocation();
-    if (position != null) {
-      setState(() {
-        _userLat = position.latitude;
-        _userLng = position.longitude;
-      });
-      return;
-    }
-
-    // 2. Fall back to district-based coordinates
-    if (user?.district != null && user!.district!.isNotEmpty) {
-      final coords = _locationService.getDistrictCoordinates(user.district);
-      if (coords != null) {
-        setState(() {
-          _userLat = coords[0];
-          _userLng = coords[1];
-        });
-        return;
-      }
-    }
-
-    // 3. Default fallback coordinates (Kigali City)
-    final defaultCoords = LocationService.getDefaultCoordinates();
-    setState(() {
-      _userLat = defaultCoords[0];
-      _userLng = defaultCoords[1];
-    });
-
-    // Prompt user if neither GPS nor address is available
-    if (user?.district == null || user!.district!.isEmpty) {
-      _showLocationPrompt();
-    }
-  }
-
-  void _showLocationPrompt() {
-    if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Location Not Set'),
-          content: const Text(
-            'Your profile has no address and GPS is unavailable. '
-            'Please enable location services or update your address in Profile settings '
-            'for more accurate service results.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Later'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _locationService.openLocationSettings();
-              },
-              child: const Text('Enable GPS'),
-            ),
-          ],
-        ),
-      );
+      final authProvider = context.read<AuthProvider>();
+      final locationProvider = context.read<LocationProvider>();
+      locationProvider.loadUserLocation(authProvider.currentUser);
     });
   }
 
   void _filterByCategory(String? category) {
-    setState(() {
-      _selectedCategory = category;
-      if (category == null) {
-        _filteredServices = _allServices;
-      } else {
-        _filteredServices = _allServices
-            .where((s) => s.category == category)
-            .toList();
-      }
-    });
+    setState(() => _selectedCategory = category);
   }
 
   @override
   Widget build(BuildContext context) {
+    final servicesProvider = context.watch<ServicesProvider>();
+    final locationProvider = context.watch<LocationProvider>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Services'),
@@ -151,66 +59,93 @@ class _ServicesScreenState extends State<ServicesScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        Padding(
+      body: Column(
+        children: [
+          StreamBuilder<List<String>>(
+            stream: servicesProvider.getCategoriesStream(),
+            builder: (context, snapshot) {
+              final categories = snapshot.data ?? [];
+              return Padding(
+                padding: const EdgeInsets.all(8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: FilterChip(
+                          label: const Text('All'),
+                          selected: _selectedCategory == null,
+                          onSelected: (_) => _filterByCategory(null),
+                        ),
+                      ),
+                      ...categories.map(
+                        (category) => Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           child: FilterChip(
-                            label: const Text('All'),
-                            selected: _selectedCategory == null,
-                            onSelected: (_) => _filterByCategory(null),
+                            label: Text(category),
+                            selected: _selectedCategory == category,
+                            onSelected: (_) => _filterByCategory(category),
                           ),
                         ),
-                        ..._categories.map(
-                          (category) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: FilterChip(
-                              label: Text(category),
-                              selected: _selectedCategory == category,
-                              onSelected: (_) => _filterByCategory(category),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(
-                  child: _filteredServices.isEmpty
-                      ? const Center(child: Text('No services found'))
-                      : ListView.builder(
-                          itemCount: _filteredServices.length,
-                          itemBuilder: (context, index) {
-                            final service = _filteredServices[index];
-                            final distance =
-                                _userLat != null && _userLng != null
-                                ? service.getDistance(_userLat!, _userLng!)
-                                : 0.0;
+              );
+            },
+          ),
+          Expanded(
+            child: StreamBuilder<List<ServiceModel>>(
+              stream: servicesProvider.getServicesStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                            if (_isDetailedView) {
-                              return ServiceDetailedTile(
-                                service: service,
-                                distance: distance,
-                              );
-                            }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
 
-                            return ServiceBriefTile(
-                              service: service,
-                              distance: distance,
-                            );
-                          },
-                        ),
-                ),
-              ],
+                final allServices = snapshot.data ?? [];
+                final filteredServices = _selectedCategory == null
+                    ? allServices
+                    : allServices.where((s) => s.category == _selectedCategory).toList();
+
+                if (filteredServices.isEmpty) {
+                  return const Center(child: Text('No services found'));
+                }
+
+                return ListView.builder(
+                  itemCount: filteredServices.length,
+                  itemBuilder: (context, index) {
+                    final service = filteredServices[index];
+                    final distance = locationProvider.userLat != null &&
+                            locationProvider.userLng != null
+                        ? service.getDistance(
+                            locationProvider.userLat!,
+                            locationProvider.userLng!,
+                          )
+                        : 0.0;
+
+                    if (_isDetailedView) {
+                      return ServiceDetailedTile(
+                        service: service,
+                        distance: distance,
+                      );
+                    }
+
+                    return ServiceBriefTile(
+                      service: service,
+                      distance: distance,
+                    );
+                  },
+                );
+              },
             ),
+          ),
+        ],
+      ),
     );
   }
 }
