@@ -32,7 +32,9 @@ class MyListingsScreen extends StatelessWidget {
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Failed to load listings: ${snapshot.error}'));
+            return Center(
+              child: Text('Failed to load listings: ${snapshot.error}'),
+            );
           }
 
           final listings = snapshot.data ?? [];
@@ -76,10 +78,7 @@ class MyListingsScreen extends StatelessWidget {
                             );
                           },
                           itemBuilder: (context) => const [
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: Text('Edit'),
-                            ),
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
                             PopupMenuItem(
                               value: 'delete',
                               child: Text('Delete'),
@@ -126,15 +125,17 @@ class MyListingsScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(existing == null ? 'Listing added.' : 'Listing updated.'),
+            content: Text(
+              existing == null ? 'Listing added.' : 'Listing updated.',
+            ),
           ),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Operation failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Operation failed: $e')));
       }
     }
   }
@@ -172,15 +173,15 @@ class MyListingsScreen extends StatelessWidget {
       );
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Listing deleted.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Listing deleted.')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Delete failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
       }
     }
   }
@@ -200,11 +201,14 @@ class _ListingFormDialogState extends State<_ListingFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _categoryController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _contactController = TextEditingController();
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
   final _phoneController = TextEditingController();
   final _websiteController = TextEditingController();
   final _descriptionController = TextEditingController();
+  String? _selectedCategory;
 
   @override
   void initState() {
@@ -213,7 +217,10 @@ class _ListingFormDialogState extends State<_ListingFormDialog> {
     if (listing == null) return;
 
     _nameController.text = listing.name;
+    _selectedCategory = listing.category;
     _categoryController.text = listing.category;
+    _addressController.text = listing.address;
+    _contactController.text = listing.contactNumber;
     _latitudeController.text = listing.latitude.toString();
     _longitudeController.text = listing.longitude.toString();
     _phoneController.text = listing.phone ?? '';
@@ -225,6 +232,8 @@ class _ListingFormDialogState extends State<_ListingFormDialog> {
   void dispose() {
     _nameController.dispose();
     _categoryController.dispose();
+    _addressController.dispose();
+    _contactController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
     _phoneController.dispose();
@@ -246,10 +255,13 @@ class _ListingFormDialogState extends State<_ListingFormDialog> {
     }
 
     final existing = widget.existing;
+    final category = _selectedCategory ?? _categoryController.text.trim();
     final service = ServiceModel(
       id: existing?.id ?? '',
       name: _nameController.text.trim(),
-      category: _categoryController.text.trim(),
+      category: category,
+      address: _addressController.text.trim(),
+      contactNumber: _contactController.text.trim(),
       latitude: lat,
       longitude: lng,
       phone: _phoneController.text.trim().isEmpty
@@ -262,6 +274,7 @@ class _ListingFormDialogState extends State<_ListingFormDialog> {
           ? null
           : _descriptionController.text.trim(),
       createdBy: existing?.createdBy ?? widget.userId,
+      createdByEmail: existing?.createdByEmail ?? '',
       timestamp: existing?.timestamp ?? DateTime.now(),
     );
 
@@ -286,12 +299,33 @@ class _ListingFormDialogState extends State<_ListingFormDialog> {
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
               ),
-              TextFormField(
-                controller: _categoryController,
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedCategory,
                 decoration: const InputDecoration(labelText: 'Category'),
+                items: ServiceModel.categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedCategory = v),
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Select a category' : null,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(labelText: 'Address'),
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
               ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _contactController,
+                decoration: const InputDecoration(labelText: 'Contact Number'),
+                keyboardType: TextInputType.phone,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty) ? 'Required' : null,
+              ),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _latitudeController,
                 decoration: const InputDecoration(labelText: 'Latitude'),
@@ -320,11 +354,15 @@ class _ListingFormDialogState extends State<_ListingFormDialog> {
               ),
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Phone (optional)',
+                ),
               ),
               TextFormField(
                 controller: _websiteController,
-                decoration: const InputDecoration(labelText: 'Website (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Website (optional)',
+                ),
               ),
               TextFormField(
                 controller: _descriptionController,

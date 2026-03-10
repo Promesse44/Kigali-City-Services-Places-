@@ -1,8 +1,10 @@
-import 'package:flutter/foundation.dart';
-import '../services.dart';
+﻿import 'package:flutter/foundation.dart';
+
+import '../models/service_model.dart';
+import '../services/listing_service.dart';
 
 class ServicesProvider extends ChangeNotifier {
-  final ServiceRepository _repository = ServiceRepository();
+  final ListingService _listingService = ListingService();
   String? _selectedCategory;
 
   String? get selectedCategory => _selectedCategory;
@@ -13,42 +15,46 @@ class ServicesProvider extends ChangeNotifier {
   }
 
   Stream<List<ServiceModel>> getAllServicesStream() {
-    return _repository.getServicesStream();
+    return _listingService.getAllServices();
   }
 
   Stream<List<ServiceModel>> getFilteredServicesStream() {
-    return _repository.getServicesStream(category: _selectedCategory);
+    return _listingService.getAllServicesFiltered(
+      category: _selectedCategory,
+    );
   }
 
   Stream<List<ServiceModel>> getUserServicesStream(String userId) {
-    return _repository.getUserServicesStream(userId);
+    return _listingService.getMyServices(userId);
   }
 
   Stream<List<String>> getCategoriesStream() {
-    return _repository.getCategoriesStream();
+    return _listingService.getCategoriesStream();
   }
 
   Future<void> addService(ServiceModel service) async {
-    await _repository.addService(service);
+    await _listingService.createService(service);
   }
 
   Future<void> updateService({
     required ServiceModel service,
     required String currentUserId,
   }) async {
-    await _repository.updateService(
-      service: service,
-      currentUserId: currentUserId,
-    );
+    if (!service.isOwnedBy(currentUserId)) {
+      throw Exception('You can only edit your own listings');
+    }
+    await _listingService.updateService(service);
   }
 
   Future<void> deleteService({
     required String serviceId,
     required String currentUserId,
   }) async {
-    await _repository.deleteService(
-      serviceId: serviceId,
-      currentUserId: currentUserId,
-    );
+    final existing = await _listingService.getServiceById(serviceId);
+    if (existing == null) throw Exception('Listing not found');
+    if (!existing.isOwnedBy(currentUserId)) {
+      throw Exception('You can only delete your own listings');
+    }
+    await _listingService.deleteService(serviceId);
   }
 }

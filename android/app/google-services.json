@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:295278056194:android:b8ad2701b3d3be693c281b",
+        "mobilesdk_app_id": "1:689434079379:android:73d16705adc01214ef5d66",
         "android_client_info": {
           "package_name": "com.example.kigali_service_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDQEYunrCWstAT6Wa3tT5fcLDut1HvBmyE"
+          "current_key": "AIzaSyAoXNWhof4zltTeLQ-Q9Qr2DLt9vZRqj-Y"
         }
       ],
       "services": {

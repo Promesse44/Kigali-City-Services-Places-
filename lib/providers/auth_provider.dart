@@ -1,9 +1,10 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
-import '../services.dart';
+import '../models/user_model.dart';
+import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -15,18 +16,20 @@ class AuthProvider extends ChangeNotifier {
   String? _errorMessage;
 
   AuthProvider() {
-    _authSubscription = _authService.authStateChanges.listen((firebaseUser) async {
-      if (firebaseUser == null) {
-        _currentUser = null;
-        _isInitialized = true;
-        notifyListeners();
-        return;
-      }
+    _authSubscription =
+        _authService.authStateChanges.listen(_onAuthChanged);
+  }
 
-      _currentUser = await _authService.getCurrentUser();
+  Future<void> _onAuthChanged(User? firebaseUser) async {
+    if (firebaseUser == null) {
+      _currentUser = null;
       _isInitialized = true;
       notifyListeners();
-    });
+      return;
+    }
+    _currentUser = await _authService.getCurrentUser();
+    _isInitialized = true;
+    notifyListeners();
   }
 
   UserModel? get currentUser => _currentUser;
@@ -38,27 +41,6 @@ class AuthProvider extends ChangeNotifier {
   bool get isEmailVerified => _authService.isEmailVerified;
 
   Stream<User?> get authStateChanges => _authService.authStateChanges;
-
-  Future<void> refreshCurrentUser() async {
-    if (firebaseUser == null) {
-      _currentUser = null;
-      notifyListeners();
-      return;
-    }
-
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      _currentUser = await _authService.getCurrentUser();
-    } catch (e) {
-      _errorMessage = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
 
   void clearError() {
     _errorMessage = null;
@@ -76,23 +58,28 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
-
     try {
-      _currentUser = await _authService.register(
+      await _authService.signUp(
         email: email,
         password: password,
-        fullName: fullName,
+        displayName: fullName,
         district: district,
         sector: sector,
         cell: cell,
       );
-    } catch (e) {
-      _errorMessage = e.toString();
-      rethrow;
-    } finally {
+    } on Exception catch (e) {
+      _errorMessage = AuthService.friendlyMessage(e);
       _isLoading = false;
       notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
     }
+    _isLoading = false;
+    notifyListeners();
   }
 
   Future<void> login({
@@ -102,16 +89,21 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
-
     try {
-      _currentUser = await _authService.login(email: email, password: password);
-    } catch (e) {
-      _errorMessage = e.toString();
-      rethrow;
-    } finally {
+      await _authService.signIn(email: email, password: password);
+    } on Exception catch (e) {
+      _errorMessage = AuthService.friendlyMessage(e);
       _isLoading = false;
       notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
     }
+    _isLoading = false;
+    notifyListeners();
   }
 
   Future<void> updateProfile({
@@ -123,18 +115,35 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
-
     try {
       await _authService.updateProfile(
-        fullName: fullName,
+        displayName: fullName,
         district: district,
         sector: sector,
         cell: cell,
       );
       await refreshCurrentUser();
+    } on Exception catch (e) {
+      _errorMessage = AuthService.friendlyMessage(e);
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshCurrentUser() async {
+    if (firebaseUser == null) {
+      _currentUser = null;
+      notifyListeners();
+      return;
+    }
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _currentUser = await _authService.getCurrentUser();
     } catch (e) {
       _errorMessage = e.toString();
-      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -157,10 +166,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await _authService.logout();
-    _currentUser = null;
-    _errorMessage = null;
-    notifyListeners();
+    await _authService.signOut();
   }
 
   @override

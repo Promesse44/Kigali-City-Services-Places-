@@ -8,8 +8,9 @@ import 'providers/location_provider.dart';
 import 'screens/auth_screen.dart';
 import 'screens/email_verification_screen.dart';
 import 'screens/services_screen.dart';
-import 'screens/profile_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/my_listings_screen.dart';
+import 'screens/kigali_map_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Kigali Service',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const AuthWrapper(),
     );
@@ -74,7 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const ServicesScreen(),
     const MyListingsScreen(),
-    const ProfileScreen(),
+    const KigaliMapScreen(),
+    const SettingsScreen(),
   ];
 
   @override
@@ -83,16 +86,20 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.location_on),
-            label: 'Services',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Directory'),
           BottomNavigationBarItem(
             icon: Icon(Icons.storefront),
             label: 'My Listings',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map View'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
         ],
         onTap: (index) {
           setState(() {

@@ -17,6 +17,8 @@ class ServicesScreen extends StatefulWidget {
 class _ServicesScreenState extends State<ServicesScreen> {
   String? _selectedCategory;
   bool _isDetailedView = false;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -30,6 +32,12 @@ class _ServicesScreenState extends State<ServicesScreen> {
 
   void _filterByCategory(String? category) {
     setState(() => _selectedCategory = category);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -61,6 +69,31 @@ class _ServicesScreenState extends State<ServicesScreen> {
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search services...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                isDense: true,
+              ),
+              onChanged: (v) =>
+                  setState(() => _searchQuery = v.trim().toLowerCase()),
+            ),
+          ),
           StreamBuilder<List<String>>(
             stream: servicesProvider.getCategoriesStream(),
             builder: (context, snapshot) {
@@ -108,9 +141,18 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 }
 
                 final allServices = snapshot.data ?? [];
-                final filteredServices = _selectedCategory == null
-                    ? allServices
-                    : allServices.where((s) => s.category == _selectedCategory).toList();
+                final filteredServices = allServices.where((s) {
+                  final matchesCategory =
+                      _selectedCategory == null ||
+                      s.category == _selectedCategory;
+                  final matchesSearch =
+                      _searchQuery.isEmpty ||
+                      s.name.toLowerCase().contains(_searchQuery) ||
+                      s.address.toLowerCase().contains(_searchQuery) ||
+                      (s.description?.toLowerCase().contains(_searchQuery) ??
+                          false);
+                  return matchesCategory && matchesSearch;
+                }).toList();
 
                 if (filteredServices.isEmpty) {
                   return const Center(child: Text('No services found'));
@@ -120,7 +162,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   itemCount: filteredServices.length,
                   itemBuilder: (context, index) {
                     final service = filteredServices[index];
-                    final distance = locationProvider.userLat != null &&
+                    final distance =
+                        locationProvider.userLat != null &&
                             locationProvider.userLng != null
                         ? service.getDistance(
                             locationProvider.userLat!,

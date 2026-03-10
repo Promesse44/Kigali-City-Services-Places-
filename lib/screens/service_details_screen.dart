@@ -25,7 +25,9 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final authProvider = context.read<AuthProvider>();
-      context.read<LocationProvider>().loadUserLocation(authProvider.currentUser);
+      context.read<LocationProvider>().loadUserLocation(
+        authProvider.currentUser,
+      );
     });
   }
 
@@ -102,7 +104,8 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.example.kigali_service_app',
                   ),
                   MarkerLayer(
@@ -167,6 +170,10 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow('Category', widget.service.category),
+                  if (widget.service.address.isNotEmpty)
+                    _buildInfoRow('Address', widget.service.address),
+                  if (widget.service.contactNumber.isNotEmpty)
+                    _buildInfoRow('Contact', widget.service.contactNumber),
                   if (distance != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -201,7 +208,10 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     const SizedBox(height: 16),
                     const Text(
                       'Description',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(widget.service.description!),
