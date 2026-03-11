@@ -39,8 +39,6 @@ class DefaultFirebaseOptions {
     storageBucket: 'kigaliservices-69504.firebasestorage.app',
   );
 
-  // TODO: Replace these with your new Firebase project configuration
-
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAoXNWhof4zltTeLQ-Q9Qr2DLt9vZRqj-Y',
     appId: '1:689434079379:android:73d16705adc01214ef5d66',

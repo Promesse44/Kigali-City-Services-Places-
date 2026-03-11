@@ -251,7 +251,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _selectedDistrict,
+          initialValue: _selectedDistrict,
           hint: const Text('Select District'),
           decoration: const InputDecoration(
             labelText: 'District',
