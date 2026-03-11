@@ -187,7 +187,8 @@ class _KigaliMapScreenState extends State<KigaliMapScreen> {
                     urlTemplate:
                         _tileProviders[_currentTileProvider] ??
                         _tileProviders['openstreetmap']!,
-                    userAgentPackageName: 'com.example.kigali_service_app',
+                    userAgentPackageName: 'com.kigali.services',
+                    retinaMode: true,
                   ),
                   MarkerLayer(markers: markers),
                 ],

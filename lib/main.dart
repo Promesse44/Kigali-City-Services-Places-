@@ -35,7 +35,19 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Kigali Service',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        useMaterial3: true,
+        primarySwatch: Colors.blue,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF2196F3),
+          foregroundColor: Colors.white,
+          elevation: 2,
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF2196F3),
+          foregroundColor: Colors.white,
+        ),
+      ),
       home: const AuthWrapper(),
     );
   }
