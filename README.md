@@ -1,202 +1,136 @@
-# 🏙️ Kigali City Services App - Complete Implementation
+# Kigali City Services & Places Directory
 
-## 🎯 Assignment Status: ✅ COMPLETE (20+ Points)
+A Flutter mobile application that helps Kigali residents locate and navigate to essential public services and leisure locations across the city — including hospitals, police stations, libraries, utility offices, restaurants, cafés, parks, and tourist attractions.
 
-All required features have been successfully implemented with Provider state management, email verification, real-time updates, and comprehensive documentation.
-
----
-
-## 📚 DOCUMENTATION INDEX
-
-### 🚀 Start Here (Choose One):
-
-1. **[QUICK_START.md](QUICK_START.md)** ⚡
-   - Fast 10-minute setup guide
-   - Step-by-step Firebase configuration
-   - Immediate testing instructions
-   - **Best for: Getting started quickly**
-
-2. **[CHECKLIST.md](CHECKLIST.md)** ✅
-   - Complete setup and testing checklist
-   - Verify every feature works
-   - Troubleshooting guide
-   - **Best for: Systematic verification**
-
-### 📖 Detailed Documentation:
-
-3. **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** 📋
-   - Complete implementation details
-   - Firebase setup instructions
-   - Security rules explanation
-   - Troubleshooting section
-   - **Best for: Understanding everything**
-
-4. **[ARCHITECTURE.md](ARCHITECTURE.md)** 🏗️
-   - Visual architecture diagrams
-   - Data flow explanations
-   - Provider pattern details
-   - **Best for: Understanding the structure**
-
-5. **[SUMMARY.md](SUMMARY.md)** 📊
-   - Overview of all changes
-   - File structure
-   - Points breakdown
-   - **Best for: Quick overview**
+Built with Firebase Authentication, Cloud Firestore, and Provider state management as part of the ALU Mobile Development individual assignment.
 
 ---
 
-## ✨ FEATURES IMPLEMENTED
+## Features
 
-### ✅ 1. Email Verification (5 Points)
-- Automatic verification email on registration
-- Blocks app access until email verified
-- Resend verification functionality
-- Persistent verification status
+### Authentication
+- Sign up with email and password via Firebase Authentication
+- Email verification enforced — users cannot access the app until their email is verified
+- Login and logout with persistent session handling
+- On registration, a user profile document is created in Firestore under `users/{uid}` linked to the authenticated user's UID
 
-### ✅ 2. State Management with Provider (10 Points)
-- **AuthProvider** - Authentication state
-- **ServicesProvider** - Services data
-- **LocationProvider** - User location
-- Clean separation of concerns
-- No direct Firestore calls in UI
+### Location Listings (CRUD)
+- Create new service or place listings stored in Cloud Firestore
+- Browse a shared real-time directory of all listings
+- Edit listings you created
+- Delete listings you created
+- Ownership is enforced in both the service layer and Firestore Security Rules — users can only modify their own listings
+- All changes reflect immediately in the UI through real-time Firestore streams
 
-### ✅ 3. My Listings Screen (5 Points)
-- Shows only user's listings
-- Edit functionality
-- Delete functionality
-- Real-time updates
-- Ownership enforcement
+### Directory Search and Filtering
+- Search listings by name using a text field
+- Filter listings by category (Hospital, Police Station, Library, Restaurant, Café, Park, Tourist Attraction, etc.)
+- Results update dynamically as Firestore data changes — no manual refresh needed
 
-### ✅ 4. Enhanced ServiceModel
-- `createdBy` field (User UID)
-- `timestamp` field (Creation date)
-- Proper serialization
+### Detail Page and Map Integration
+- Tap any listing to open its detail page showing all fields
+- Embedded map (OpenStreetMap via `flutter_map`) with a marker at the listing's stored coordinates
+- "Get Directions" button launches Google Maps with turn-by-turn navigation to the listing's location
 
-### ✅ 5. Real-time Updates
-- Firestore streams throughout
-- Automatic UI updates
-- No manual refresh needed
+### Navigation
+Bottom navigation bar with four screens:
+- **Directory** — browse and search all listings
+- **My Listings** — manage listings you created
+- **Map View** — see all listings as markers on a full map
+- **Settings** — view your profile and toggle notification preferences
 
----
-
-## 🚀 QUICK START (3 Steps)
-
-### 1. Install Dependencies
-```bash
-flutter pub get
-```
-
-### 2. Configure Firebase
-Follow **[QUICK_START.md](QUICK_START.md)** Section 2 (5 minutes)
-- Enable Email/Password Authentication
-- Enable Firestore Database
-- Set Security Rules
-
-### 3. Run & Test
-```bash
-flutter run
-```
-Then follow **[CHECKLIST.md](CHECKLIST.md)** for testing
+### Settings
+- Displays the authenticated user's profile (name, email, district, sector, cell)
+- Notification preference toggle stored in Firestore on the user's profile document
 
 ---
 
-## 📁 PROJECT STRUCTURE
+## Firestore Database Structure
+
+### `users` collection
+Each document is keyed by the user's Firebase Auth UID.
+
+| Field | Type | Description |
+|---|---|---|
+| `uid` | String | Firebase Auth UID |
+| `email` | String | Registered email address |
+| `displayName` | String | Full name from registration |
+| `createdAt` | Timestamp | Account creation time |
+| `notificationsEnabled` | Boolean | Notification preference toggle |
+| `likedListings` | Array of Strings | IDs of listings the user has liked |
+| `district` | String (optional) | Kigali district |
+| `sector` | String (optional) | Sector within district |
+| `cell` | String (optional) | Cell within sector |
+
+### `services` collection
+Each document represents one service or place listing.
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | String | Place or service name |
+| `category` | String | e.g. Hospital, Restaurant, Park |
+| `address` | String | Street address |
+| `contactNumber` | String | Primary contact number |
+| `phone` | String (optional) | Alternate phone number |
+| `website` | String (optional) | Website URL |
+| `description` | String (optional) | Freeform description |
+| `latitude` | Number | Geographic latitude |
+| `longitude` | Number | Geographic longitude |
+| `createdBy` | String | UID of the user who created the listing |
+| `createdByEmail` | String | Email of the creator |
+| `timestamp` | Timestamp | Creation time |
+
+A composite index on `(category ASC, timestamp DESC)` is required for filtered queries and is defined in `firestore.indexes.json`.
+
+---
+
+## State Management
+
+The app uses the **Provider** package with `ChangeNotifier`. Three providers are registered globally via `MultiProvider` in `main.dart`:
+
+### `AuthProvider`
+Wraps `AuthService` and exposes authentication state to the entire widget tree. Listens to `FirebaseAuth.idTokenChanges()`, which fires on sign-in, sign-out, and token refresh (including after email verification). This drives the `AuthWrapper` in `main.dart` which routes between `AuthScreen`, `EmailVerificationScreen`, and `HomeScreen`.
+
+### `ServicesProvider`
+Wraps `ListingService` and exposes Stream-based getters consumed by `StreamBuilder` widgets in the Directory and My Listings screens. All CRUD operations (`addService`, `updateService`, `deleteService`) go through this provider, which delegates to `ListingService` and enforces ownership before writing to Firestore. No UI widget calls Firestore directly.
+
+### `LocationProvider`
+Manages the device's GPS coordinates used for map centering and stores location-based notification preferences locally.
+
+---
+
+## Architecture
 
 ```
 lib/
-├── providers/                    [NEW - State Management]
-│   ├── auth_provider.dart
-│   ├── services_provider.dart
-│   └── location_provider.dart
-│
-├── screens/
-│   ├── auth_screen.dart          [MODIFIED]
-│   ├── email_verification_screen.dart  [NEW]
-│   ├── my_listings_screen.dart   [NEW]
-│   ├── profile_screen.dart       [MODIFIED]
-│   ├── services_screen.dart      [MODIFIED]
-│   └── ...
-│
-├── main.dart                     [MODIFIED - Provider setup]
-├── services.dart                 [MODIFIED - Streams & fields]
-└── seed_data.dart                [MODIFIED - New fields]
+  models/       Pure Dart data classes (ServiceModel, UserModel)
+  services/     Firebase logic only (AuthService, ListingService)
+  providers/    ChangeNotifier state layer (AuthProvider,
+                ServicesProvider, LocationProvider)
+  screens/      UI only — reads state via context.watch / StreamBuilder
 ```
 
----
-
-## 🔥 FIREBASE REQUIREMENTS
-
-### Required Services:
-1. ✅ Firebase Authentication (Email/Password)
-2. ✅ Cloud Firestore Database
-3. ✅ Security Rules (provided)
-
-### Collections:
-- `users` - User profiles
-- `services` - Service listings
-
-### Security:
-- Email verification required
-- Ownership-based access control
-- Secure CRUD operations
+Data flows in one direction: Firestore → `ListingService` → `ServicesProvider` → UI widgets. Widgets call methods on providers; providers call service methods; services interact with Firebase.
 
 ---
 
-## 🎓 LEARNING OUTCOMES
+## Firebase Setup
 
-This implementation demonstrates:
-- ✅ Provider state management pattern
-- ✅ Firebase Authentication with verification
-- ✅ Firestore real-time streams
-- ✅ Security rules implementation
-- ✅ CRUD with ownership control
-- ✅ Clean architecture principles
-- ✅ Flutter best practices
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Enable **Email/Password** authentication under Authentication → Sign-in method
+3. Create a **Cloud Firestore** database
+4. Publish the security rules from `firestore.rules`
+5. Create the composite index: collection `services`, fields `category ASC` + `timestamp DESC`
+6. Run `flutterfire configure` and replace `lib/firebase_options.dart` with your project's config
 
----
+## Running the App
 
-## 📊 ASSIGNMENT POINTS
+```bash
+flutter pub get
+flutter run
+```
 
-| Feature | Points | Status |
-|---------|--------|--------|
-| Email Verification | 5 | ✅ Complete |
-| State Management (Provider) | 10 | ✅ Complete |
-| My Listings Screen | 5 | ✅ Complete |
-| **TOTAL** | **20+** | **✅ DONE** |
-
----
-
-## 🧪 TESTING
-
-### Quick Test (5 minutes):
-1. Register with your email
-2. Verify email
-3. Load sample data
-4. Browse services
-5. Check My Listings
-
-### Complete Test:
-Follow **[CHECKLIST.md](CHECKLIST.md)** for comprehensive testing
-
----
-
-## 🐛 TROUBLESHOOTING
-
-### Common Issues:
-
-**Email not received?**
-→ Check spam folder, resend verification
-
-**Permission denied?**
-→ Verify security rules published, email verified
-
-**Provider error?**
-→ Ensure MultiProvider in main.dart, run `flutter pub get`
-
-**Services not showing?**
-→ Click "Load Sample Kigali Services" in Profile tab
-
-See **[CHECKLIST.md](CHECKLIST.md)** Troubleshooting section for more
+The app must be run on an Android/iOS emulator or a physical device.
 
 ---
 
