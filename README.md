@@ -1,45 +1,45 @@
-# 🏙️ Kigali City Services & Places Directory
+# Kigali City Services & Places Directory
 
 A Flutter app that helps you find hospitals, restaurants, schools, banks, and all kinds of services across Kigali. Built with Firebase and Provider.
 
 ---
 
-## ✨ What you can do
+## What you can do
 
-**🔍 Browse & Search**
+**Browse & Search**
 - View all services in one place
 - Search by name or filter by category
 - Real-time updates as new listings are added
 
-**📍 Map It**
+**Map It**
 - See services on a map with markers
 - Get directions with Google Maps integration
 - Find what's near you
 
-**✍️ Manage Listings**
+**Manage Listings**
 - Add your own service or place
 - Edit listings you created
 - Delete what you no longer need
 
-**👤 Profile**
+**Profile**
 - Create an account with email
 - Manage your profile
 - Control notification settings
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Flutter** — UI framework
-- **Firebase Auth** — user authentication
-- **Cloud Firestore** — database
-- **Provider** — state management
-- **flutter_map** — mapping
-- **geolocator** — GPS location
+- Flutter — UI framework
+- Firebase Auth — user authentication
+- Cloud Firestore — database
+- Provider — state management
+- flutter_map — mapping
+- geolocator — GPS location
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 lib/
@@ -49,11 +49,11 @@ lib/
   └── screens/     → UI screens
 ```
 
-Simple flow: **Firestore → Services → Providers → UI**
+Simple flow: Firestore → Services → Providers → UI
 
 ---
 
-## 🗄️ Database Schema
+## Database Schema
 
 **users**
 - uid, email, displayName
@@ -68,11 +68,11 @@ Simple flow: **Firestore → Services → Providers → UI**
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Setup Firebase
 
-Go to [Firebase Console](https://console.firebase.google.com) and:
+Go to Firebase Console and:
 - Create a new project
 - Enable Email/Password auth
 - Create a Cloud Firestore database
@@ -94,48 +94,48 @@ flutter run
 
 ---
 
-## 📱 Screens
+## Screens
 
 | Tab | What it does |
 |-----|--------------|
-| 🔍 **Directory** | Browse all services, search, filter |
-| 📝 **My Listings** | Your services, edit/delete them |
-| 🗺️ **Map** | See everything on a map |
-| ⚙️ **Settings** | Profile, notifications, logout |
+| Directory | Browse all services, search, filter |
+| My Listings | Your services, edit/delete them |
+| Map | See everything on a map |
+| Settings | Profile, notifications, logout |
 
 ---
 
-## 🔒 Security
+## Security
 
-✅ Email verification required  
-✅ Users can only edit their own listings  
-✅ Firestore rules enforce ownership  
-✅ Authenticated requests only  
-
----
-
-## 🎨 Features
-
-- 🌈 Color-coded categories
-- 📍 GPS-powered map view
-- 🔄 Real-time updates
-- 📱 Mobile-first design
-- 🔍 Smart search & filtering
-- 🗺️ Navigate with Google Maps
+- Email verification required
+- Users can only edit their own listings
+- Firestore rules enforce ownership
+- Authenticated requests only
 
 ---
 
-## 📖 Need Help?
+## Features
 
-Check these files:
-- **QUICK_START.md** — setup guide
-- **CHECKLIST.md** — testing checklist
-- **ARCHITECTURE.md** — how it's built
-- **IMPLEMENTATION_GUIDE.md** — detailed docs
+- Color-coded categories
+- GPS-powered map view
+- Real-time updates
+- Mobile-first design
+- Smart search & filtering
+- Navigate with Google Maps
 
 ---
 
-## 🏗️ Built with ❤️
+## Documentation
+
+Check these files for more info:
+- QUICK_START.md — setup guide
+- CHECKLIST.md — testing checklist
+- ARCHITECTURE.md — how it's built
+- IMPLEMENTATION_GUIDE.md — detailed docs
+
+---
+
+## About
 
 This is a learning project built for the ALU Mobile Development assignment. It's production-ready with clean code, proper architecture, and full documentation.
 
@@ -143,4 +143,4 @@ Made to help Kigali residents find what they need. Easy to use. Fast. Reliable.
 
 ---
 
-Made with Flutter 💙
+Made with Flutter
