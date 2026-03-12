@@ -10,9 +10,9 @@ class LocationService {
     'Nyarugenge': [-1.9560, 29.8760],
   };
 
-  static const double kigaliNorthBound = -1.9200;
-  static const double kigaliSouthBound = -1.9700;
-  static const double kigaliEastBound = 30.0200;
+  static const double kigaliNorthBound = -1.8800;
+  static const double kigaliSouthBound = -2.0000;
+  static const double kigaliEastBound = 30.1500;
   static const double kigaliWestBound = 29.8300;
   static const double kigaliCenterLat = -1.9505;
   static const double kigaliCenterLng = 29.8739;
