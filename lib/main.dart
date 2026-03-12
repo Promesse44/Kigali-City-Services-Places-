@@ -92,9 +92,30 @@ class _HomeScreenState extends State<HomeScreen> {
     const SettingsScreen(),
   ];
 
+  PreferredSizeWidget? _buildAppBar(BuildContext context) {
+    if (_selectedIndex != 0) return null;
+
+    return AppBar(
+      title: const Text('Services'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.map),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const KigaliMapScreen()),
+            );
+          },
+          tooltip: 'View on Map',
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: _buildAppBar(context),
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,

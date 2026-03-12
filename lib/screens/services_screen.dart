@@ -5,7 +5,6 @@ import '../providers/auth_provider.dart';
 import '../providers/services_provider.dart';
 import '../providers/location_provider.dart';
 import 'service_details_screen.dart';
-import 'kigali_map_screen.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -45,53 +44,45 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final servicesProvider = context.watch<ServicesProvider>();
     final locationProvider = context.watch<LocationProvider>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Services'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.map),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const KigaliMapScreen()),
-              );
-            },
-            tooltip: 'View on Map',
-          ),
-          IconButton(
-            icon: Icon(_isDetailedView ? Icons.list : Icons.view_list),
-            onPressed: () {
-              setState(() => _isDetailedView = !_isDetailedView);
-            },
-          ),
-        ],
-      ),
-      body: Column(
+    return Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search services...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search services...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      isDense: true,
+                    ),
+                    onChanged: (v) =>
+                        setState(() => _searchQuery = v.trim().toLowerCase()),
+                  ),
                 ),
-                isDense: true,
-              ),
-              onChanged: (v) =>
-                  setState(() => _searchQuery = v.trim().toLowerCase()),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(_isDetailedView ? Icons.list : Icons.view_list),
+                  tooltip: _isDetailedView ? 'Compact view' : 'Detailed view',
+                  onPressed: () {
+                    setState(() => _isDetailedView = !_isDetailedView);
+                  },
+                ),
+              ],
             ),
           ),
           StreamBuilder<List<String>>(
@@ -137,7 +128,51 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  final errorMessage = snapshot.error.toString();
+                  final permissionDenied =
+                      errorMessage.contains('permission-denied');
+
+                  if (permissionDenied) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Access denied. Your session may still be using old verification data.',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: () async {
+                                final authProvider =
+                                    context.read<AuthProvider>();
+                                final isVerified = await authProvider
+                                    .refreshEmailVerificationStatus();
+
+                                if (!context.mounted) return;
+
+                                final msg = isVerified
+                                    ? 'Session refreshed. Retrying access...'
+                                    : 'Email not verified yet. Verify then try again.';
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(msg)),
+                                );
+
+                                if (isVerified) {
+                                  setState(() {});
+                                }
+                              },
+                              child: const Text('Refresh Access'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Center(child: Text('Error: $errorMessage'));
                 }
 
                 final allServices = snapshot.data ?? [];
@@ -188,7 +223,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
             ),
           ),
         ],
-      ),
     );
   }
 }

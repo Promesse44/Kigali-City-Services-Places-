@@ -73,7 +73,12 @@ class AuthService {
   }
 
   Future<void> reloadUser() async {
-    await _auth.currentUser?.reload();
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await user.reload();
+    // Ensure Firestore rules that rely on email_verified see the latest claim.
+    await _auth.currentUser?.getIdToken(true);
   }
 
   Future<UserModel?> getUserProfile(String uid) async {

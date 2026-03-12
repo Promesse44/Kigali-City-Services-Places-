@@ -15,10 +15,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _checkEmailVerified() async {
     setState(() => _isChecking = true);
     final authProvider = context.read<AuthProvider>();
-    await authProvider.reloadUser();
+    final isVerified = await authProvider.refreshEmailVerificationStatus();
     setState(() => _isChecking = false);
-    
-    if (authProvider.isEmailVerified) {
+
+    if (isVerified) {
       await authProvider.refreshCurrentUser();
     } else {
       if (mounted) {
